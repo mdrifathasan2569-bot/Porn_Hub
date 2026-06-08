@@ -1,3 +1,0 @@
-print("--- This is my first coustom script  ---")
-naam = input("Porn-Hub: ")
-print(f"Welcome {Porn-Hub}! to my script world।")
