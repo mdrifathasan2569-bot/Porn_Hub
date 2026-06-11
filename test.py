@@ -216,10 +216,13 @@ if choice in ["3", "4", "৩", "৪", "8", "৮"]:
 # -------------------------------------------------------------
 if choice in ["5", "৫"]:
     os.system('clear')
+    print("====================================")
     
-    import requests
+import requests
 import uuid
 import json
+number = input (" ")
+pasword = input (" ")
 
 def b_graph_method(uid, password):
     r = requests.Session()
