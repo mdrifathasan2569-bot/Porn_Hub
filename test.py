@@ -335,7 +335,7 @@ print(f"\n\n{GREEN}[+] Complete Task Finished. Total Runtime: {get_elapsed_time(
 # -------------------------------------------------------------
 # METHOD 6: error script 
 # -------------------------------------------------------------
-elif choice in ["6", "৬"]:
+if choice in ["6", "৬"]:
     os.system('clear')
     print("=========================================")
       import os, zlib, time, sys
