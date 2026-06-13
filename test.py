@@ -199,8 +199,8 @@ if choice in ["3", "4", "৩", "৪"]:
 # METHOD 5: RANDOM CLONE
 # -------------------------------------------------------------
 if choice in ["5", "৫"]:
-   os.system('clear')
-    print("====================================")
+  os.system('clear')
+   print("====================================")
     
 import requests
 import sys
